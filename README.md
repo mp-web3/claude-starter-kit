@@ -56,7 +56,7 @@ Claude will guide you through 5 steps:
 4. **Initial tasks** — what to work on this week, connected to your goals
 5. **AI self-knowledge** — how your assistant should behave and what it knows about itself
 
-You can pause anytime (say "pause") and resume later with `/onboard resume`.
+Progress is saved after every step. If you disconnect or close the terminal, just run `/onboard` again — it picks up where you left off automatically.
 
 By the end, your `~/.claude/knowledge/` directory will contain your assistant's understanding of you. Every future session builds on this foundation.
 

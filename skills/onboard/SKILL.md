@@ -10,7 +10,6 @@ argument-hint: "[resume]"
 You are guiding a new user through setting up their personal AI assistant. This is their first session. Be conversational, curious, and patient. Don't rush through steps — each one matters.
 
 **Arguments:** `$ARGUMENTS`
-If `$ARGUMENTS` contains "resume", read MEMORY.md and `knowledge/user/profile.md` to figure out where you left off, then continue from there.
 
 ---
 
@@ -18,13 +17,46 @@ If `$ARGUMENTS` contains "resume", read MEMORY.md and `knowledge/user/profile.md
 
 1. Read `~/.claude/CLAUDE.md` and all files in `~/.claude/rules/`
 2. Read all files in `~/.claude/knowledge/` (if any exist)
-3. Check if `~/.claude/knowledge/user/profile.md` already exists — if so, you may be resuming
+3. Check if `~/.claude/state/onboard-progress.yaml` exists — if so, resume (see Resuming below)
+
+### Resuming
+
+On ANY `/onboard` invocation:
+
+1. Check if `~/.claude/state/onboard-progress.yaml` exists
+2. If yes:
+   - Read `step_completed` to know where they left off
+   - Read all files listed in `files_written` to rebuild context
+   - Tell the user: "Found your progress from last time — you finished step N. Picking up at step N+1."
+   - Continue from step N+1
+3. If no: start from Step 1
+4. After completing the final step, delete `onboard-progress.yaml` and commit
+
+### Checkpoint Rule (Non-Negotiable)
+
+After completing EACH step, immediately:
+
+1. Write/update `~/.claude/state/onboard-progress.yaml`:
+   ```yaml
+   step_completed: N
+   timestamp: YYYY-MM-DDTHH:MM
+   files_written:
+     - knowledge/user/profile.md
+     # ... list all files written so far
+   ```
+2. Commit locally: `cd ~/.claude && git add -A && git commit -m "onboard: checkpoint after step N"`
+
+Do NOT batch commits to the end. Each step is a checkpoint. If the user disconnects, their progress is on disk.
+
+No `git push` during onboarding — the user may not have a remote configured yet.
+
+### Greeting
 
 Greet the user by name (from CLAUDE.md). Explain what you're about to do:
 
 > We're going to set up your AI assistant in 5 steps. By the end, I'll know who you are, what drives you, and what you're working toward. Every future session builds on what we create today.
 >
-> This takes about 20-30 minutes. We can pause anytime — just say "pause" and I'll save our progress.
+> This takes about 20-30 minutes. If you disconnect at any point, just run `/onboard` again and I'll pick up where we left off.
 
 ---
 
@@ -213,17 +245,34 @@ Adapt the tone to match the user's communication style observed in Steps 1-4.
 
 ## Finishing Up
 
-1. **Commit everything:**
+1. **Final commit:**
    ```bash
-   cd ~/.claude && git add -A && git commit -m "onboarding: profile, problems, goals, tasks, identity"
+   cd ~/.claude && git add -A && git commit -m "onboarding: complete"
    ```
 
-2. **Update MEMORY.md** with:
+2. **Delete progress file:**
+   ```bash
+   rm ~/.claude/state/onboard-progress.yaml && cd ~/.claude && git add -A && git commit -m "onboard: cleanup progress file"
+   ```
+
+3. **Set up remote backup (optional but recommended):**
+   ```bash
+   gh repo create claude-config --private --source ~/.claude --push
+   ```
+   This creates a private GitHub repo and pushes everything in one command. Requires `gh` CLI (`brew install gh && gh auth login`).
+
+   If they don't have `gh`, give the manual route:
+   ```bash
+   # Create the repo on GitHub first (github.com/new), then:
+   cd ~/.claude && git remote add origin git@github.com:USERNAME/claude-config.git && git push -u origin main
+   ```
+
+4. **Update MEMORY.md** with:
    - Active Tasks from Step 4
    - "Next Up" section pointing to the highest-priority task
    - File map of everything created
 
-3. **Show a summary:**
+5. **Show a summary:**
    > Here's what we built:
    > - Your profile: knowledge/user/profile.md
    > - Your 12 problems: knowledge/problems/
@@ -237,7 +286,7 @@ Adapt the tone to match the user's communication style observed in Steps 1-4.
    >
    > Use `/tasks` to manage your backlog — add tasks, review priorities, mark things done.
 
-4. **Create session note** in `knowledge/sessions/YYYY-MM-DD-onboarding.md`
+6. **Create session note** in `knowledge/sessions/YYYY-MM-DD-onboarding.md`
 
 ---
 
@@ -245,6 +294,6 @@ Adapt the tone to match the user's communication style observed in Steps 1-4.
 
 At any point:
 1. Save all progress made so far (write partial files)
-2. Update MEMORY.md "Next Up" with: "Resume /onboard — left off at Step N"
-3. Commit
-4. Tell them: "Progress saved. Next session, run `/onboard resume` to continue."
+2. Update `state/onboard-progress.yaml` with current step and files written
+3. Commit locally
+4. Tell them: "Progress saved. Next session, just run `/onboard` and I'll pick up where we left off."
