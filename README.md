@@ -117,6 +117,52 @@ Claude Code has no memory between sessions. It reads certain files at startup (`
 3. **Knowledge files** — read on demand. Claude accumulates project knowledge, user preferences, session history here.
 4. **Hooks** — shell scripts that fire on events. Pre-compact saves state. Custom compaction prompt tells the summarizer what to preserve. Session reminders ensure nothing is forgotten.
 
+### How Knowledge Routing Works
+
+This is the part that surprises people: **knowledge files are NOT loaded at startup.** They are read on demand.
+
+Your `CLAUDE.md` contains a plain markdown table — a map of file paths and one-line descriptions:
+
+```markdown
+## Knowledge Files — Read On Demand
+
+| Path | Content |
+|---|---|
+| `knowledge/user/profile.md` | Background, career, personality, preferences |
+| `knowledge/user/goals.md` | End goal, subgoals, metrics |
+| `knowledge/problems/00-overview.md` | 12 Favorite Problems — overview and how to use |
+| `knowledge/projects/my-app.md` | Architecture, decisions, current state |
+```
+
+Claude reads this table at session start (it's part of `CLAUDE.md`), sees what exists, and then uses the `Read` tool to open specific files when it needs them during the conversation. If you ask about your goals, it reads `goals.md`. If you ask about a project, it reads that project's file. The context cost is just the index table (~20-30 lines) plus whatever Claude pulls in for the current task.
+
+A typical session loads 3-5 files out of however many you have. This is different from the `@import` syntax in `CLAUDE.md`, which loads files at startup into every session. Use `@import` for things you always want (rules). Use the table for everything else.
+
+The `/onboard` skill creates the initial knowledge files and the table. As you work, Claude adds new entries to the table when it creates new knowledge files.
+
+### How the Security Guard Works
+
+The guard script (`scripts/global-guard.py`) hooks into Claude Code's `PreToolUse` event — it runs before every tool call and can block dangerous operations.
+
+**What it blocks:**
+
+| Category | Examples | Why |
+|---|---|---|
+| Path boundaries | Reads/writes outside `$HOME` and `/tmp` | Prevents system file modification |
+| Secrets | `.env`, `.key`, `.pem`, `.secret` files | Prevents accidental exposure |
+| Git safety | `git push --force`, `git add` on secret files | Prevents data loss and secret commits |
+| Destructive ops | `rm -rf` (Bash guard) | Use `trash` instead (recoverable) |
+| Branch protection | Direct push to `main`/`master` | Forces feature branch workflow |
+
+**How it works technically:**
+
+The guard is configured in `settings.json` as a `PreToolUse` hook. Claude Code sends the tool name and input to the script. The script checks against its rules and returns either `{"allow": true}` or `{"blocked": true, "reason": "..."}`. If blocked, Claude sees the reason and adjusts its approach.
+
+You can customize the guard by editing `scripts/global-guard.py`. Common additions:
+- Block specific directories (e.g., a company repo you want read-only)
+- Add file extension blocks
+- Log blocked operations for audit
+
 ### The Self-Improvement Loop
 
 ```

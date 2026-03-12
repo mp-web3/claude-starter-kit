@@ -1,3 +1,11 @@
 __pycache__/
 scripts/__pycache__/
 *.pyc
+.DS_Store
+*.db
+*.db-journal
+state/sessions/
+state/backlog.md
+state/rule-feedback.json
+state/onboard-progress.yaml
+knowledge/
