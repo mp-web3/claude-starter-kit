@@ -16,11 +16,23 @@ import sys
 from pathlib import Path
 
 HOME_DIR = str(Path.home())
+IS_WINDOWS = sys.platform == "win32" or os.name == "nt"
 
 SECRETS_RE = re.compile(r"\.(env|key|pem|secret|keystore)$|\.env\.", re.IGNORECASE)
 
-WRITABLE_ROOTS = [HOME_DIR, str(Path("/tmp").resolve()), str(Path("/var/tmp").resolve())]
-READABLE_ROOTS = WRITABLE_ROOTS + [str(Path("/usr/local").resolve()), str(Path("/opt/homebrew").resolve())]
+if IS_WINDOWS:
+    # On Windows/Git Bash, /tmp may map to a system temp dir; also allow the real temp path
+    _tmp_dirs = [
+        str(Path(os.environ.get("TEMP", "")).resolve()) if os.environ.get("TEMP") else None,
+        str(Path(os.environ.get("TMP", "")).resolve()) if os.environ.get("TMP") else None,
+    ]
+    WRITABLE_ROOTS = [HOME_DIR] + [d for d in _tmp_dirs if d]
+    READABLE_ROOTS = WRITABLE_ROOTS + [
+        str(Path(os.environ.get("PROGRAMFILES", "C:\\Program Files")).resolve()),
+    ]
+else:
+    WRITABLE_ROOTS = [HOME_DIR, str(Path("/tmp").resolve()), str(Path("/var/tmp").resolve())]
+    READABLE_ROOTS = WRITABLE_ROOTS + [str(Path("/usr/local").resolve()), str(Path("/opt/homebrew").resolve())]
 
 PASSTHROUGH_TOOLS = {
     "WebSearch", "WebFetch", "AskUserQuestion",
@@ -44,7 +56,8 @@ def resolve(p: str) -> str:
 
 def inside(path: str, roots: list) -> bool:
     r = resolve(path)
-    return any(r == root or r.startswith(root + "/") for root in roots)
+    sep = os.sep
+    return any(r == root or r.startswith(root + sep) for root in roots)
 
 
 def is_secrets(p: str) -> bool:

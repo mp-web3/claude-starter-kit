@@ -17,21 +17,33 @@ echo ""
 OS="unknown"
 PKG_INSTALL=""
 
-if [[ "$(uname)" == "Darwin" ]]; then
-    OS="macos"
-    if command -v brew >/dev/null 2>&1; then
-        PKG_INSTALL="brew install"
-    fi
-elif [[ "$(uname)" == "Linux" ]]; then
-    OS="linux"
-    if command -v apt-get >/dev/null 2>&1; then
-        PKG_INSTALL="sudo apt-get install -y"
-    elif command -v dnf >/dev/null 2>&1; then
-        PKG_INSTALL="sudo dnf install -y"
-    elif command -v pacman >/dev/null 2>&1; then
-        PKG_INSTALL="sudo pacman -S --noconfirm"
-    fi
-fi
+case "$(uname -s)" in
+    Darwin)
+        OS="macos"
+        if command -v brew >/dev/null 2>&1; then
+            PKG_INSTALL="brew install"
+        fi
+        ;;
+    Linux)
+        OS="linux"
+        if command -v apt-get >/dev/null 2>&1; then
+            PKG_INSTALL="sudo apt-get install -y"
+        elif command -v dnf >/dev/null 2>&1; then
+            PKG_INSTALL="sudo dnf install -y"
+        elif command -v pacman >/dev/null 2>&1; then
+            PKG_INSTALL="sudo pacman -S --noconfirm"
+        fi
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        OS="windows"
+        # On Windows/Git Bash, most deps are installed externally (winget, scoop, choco)
+        if command -v scoop >/dev/null 2>&1; then
+            PKG_INSTALL="scoop install"
+        elif command -v choco >/dev/null 2>&1; then
+            PKG_INSTALL="choco install -y"
+        fi
+        ;;
+esac
 
 echo "Detected: $OS"
 echo ""
@@ -92,9 +104,18 @@ else
 fi
 
 # --- Python 3 ---
-if command -v python3 >/dev/null 2>&1; then
-    PY_VER=$(python3 --version 2>&1)
-    echo "  ✓ python3 ($PY_VER)"
+# On Windows, python3 may be a Microsoft Store stub that doesn't actually work.
+# Test that the command actually runs successfully.
+PYTHON3=""
+if python3 --version >/dev/null 2>&1; then
+    PYTHON3="python3"
+elif python --version 2>&1 | grep -q "Python 3"; then
+    PYTHON3="python"
+fi
+
+if [[ -n "$PYTHON3" ]]; then
+    PY_VER=$($PYTHON3 --version 2>&1)
+    echo "  ✓ $PYTHON3 ($PY_VER)"
 else
     echo "  ✗ python3 — not found (needed for security guard and task database)"
     install_with_prompt "python3" "python3" || MISSING=1
@@ -109,7 +130,7 @@ else
 fi
 
 # --- trash (safe rm replacement) ---
-if command -v trash >/dev/null 2>&1; then
+if command -v trash >/dev/null 2>&1 || command -v trash-put >/dev/null 2>&1; then
     echo "  ✓ trash"
 elif [[ "$OS" == "macos" ]]; then
     echo "  ✗ trash — not found (safe alternative to rm -rf, moves to Trash)"
@@ -117,6 +138,8 @@ elif [[ "$OS" == "macos" ]]; then
 elif [[ "$OS" == "linux" ]]; then
     echo "  ✗ trash-cli — not found (safe alternative to rm -rf)"
     install_with_prompt "trash-cli" "trash-cli" || true
+elif [[ "$OS" == "windows" ]]; then
+    echo "  ⚠ trash — not found (optional; install via: npm install -g trash-cli)"
 fi
 
 # --- Claude Code CLI ---
@@ -222,8 +245,8 @@ sed -e "s/{{USER_NAME}}/$USER_NAME/g" \
     "$SCRIPT_DIR/templates/CLAUDE.md" > "$CLAUDE_DIR/CLAUDE.md"
 
 # --- Initialize task database and export backlog ---
-python3 "$CLAUDE_DIR/scripts/db.py" init
-python3 "$CLAUDE_DIR/scripts/db.py" export
+${PYTHON3:-python3} "$CLAUDE_DIR/scripts/db.py" init
+${PYTHON3:-python3} "$CLAUDE_DIR/scripts/db.py" export
 
 # --- Create starter MEMORY.md ---
 cat > "$CLAUDE_DIR/MEMORY.md" << 'MEMEOF'

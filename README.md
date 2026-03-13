@@ -39,7 +39,11 @@ This is different from the `@import` syntax in `CLAUDE.md`, which loads files in
 
 ## Setup (5 minutes)
 
-**Prerequisites:** [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code), Git, Python 3.10+, jq (`brew install jq` on macOS)
+**Prerequisites:** [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code), Git, Python 3.10+, jq
+
+- **macOS:** `brew install jq`
+- **Linux:** `apt install jq` / `dnf install jq`
+- **Windows:** Install [Git Bash](https://gitforwindows.org), then `scoop install jq` or `choco install jq`
 
 ```bash
 git clone https://github.com/mp-web3/claude-starter-kit.git
