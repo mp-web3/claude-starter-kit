@@ -10,7 +10,8 @@ set -euo pipefail
 
 STATE_DIR="$HOME/.claude/state"
 STATE_FILE="$STATE_DIR/pre-compact-state.md"
-DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# date -u works in Git Bash on Windows; use fallback if needed
+DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")
 KB_DIR="$HOME/.claude/knowledge"
 
 mkdir -p "$STATE_DIR"

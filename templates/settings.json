@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/scripts/global-guard.py",
+            "command": "PY=$(python3 --version >/dev/null 2>&1 && echo python3 || echo python); $PY $HOME/.claude/scripts/global-guard.py",
             "timeout": 5
           }
         ]
@@ -64,8 +64,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'",
-            "timeout": 5
+            "command": "if command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'; elif command -v powershell.exe >/dev/null 2>&1; then powershell.exe -NoProfile -Command \"[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; $n = New-Object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(3000, 'Claude Code', 'Claude Code needs your attention', 'Info'); Start-Sleep -Seconds 4; $n.Dispose()\"; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Claude Code needs your attention'; fi",
+            "timeout": 10
           }
         ]
       }
