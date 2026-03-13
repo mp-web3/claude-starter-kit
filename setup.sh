@@ -178,7 +178,7 @@ echo "Setting up ~/.claude/ ..."
 # -----------------------------------------------
 
 # Create directory structure
-mkdir -p "$CLAUDE_DIR"/{rules,scripts,knowledge/self,knowledge/user,knowledge/problems,knowledge/projects,skills/onboard,skills/tasks,skills/plan-and-implement,skills/reflect,state/sessions}
+mkdir -p "$CLAUDE_DIR"/{rules,scripts,agents,knowledge/self,knowledge/user,knowledge/problems,knowledge/projects,skills/onboard,skills/tasks,skills/plan-and-implement,skills/reflect,state/sessions}
 
 # --- Copy scripts ---
 cp "$SCRIPT_DIR/scripts/global-guard.py" "$CLAUDE_DIR/scripts/"
@@ -191,6 +191,11 @@ chmod +x "$CLAUDE_DIR/scripts/"*.sh "$CLAUDE_DIR/scripts/"*.py
 # --- Copy rules ---
 for rule in "$SCRIPT_DIR"/rules/*.md; do
     cp "$rule" "$CLAUDE_DIR/rules/"
+done
+
+# --- Copy agents ---
+for agent in "$SCRIPT_DIR"/agents/*.md; do
+    cp "$agent" "$CLAUDE_DIR/agents/"
 done
 
 # --- Copy skills ---
@@ -245,6 +250,7 @@ echo "Files installed:"
 echo "  ~/.claude/CLAUDE.md          — global instructions"
 echo "  ~/.claude/settings.json      — hooks + security"
 echo "  ~/.claude/rules/             — session, workflow, handoff, task, delegation, development rules"
+echo "  ~/.claude/agents/            — code-reviewer, bug-fixer, implementer, researcher"
 echo "  ~/.claude/scripts/           — security guard, pre-compact, reminders, db, learning extractor"
 echo "  ~/.claude/skills/onboard/    — guided first-session setup"
 echo "  ~/.claude/skills/tasks/      — task management (/tasks)"
